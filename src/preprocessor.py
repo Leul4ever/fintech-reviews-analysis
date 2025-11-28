@@ -1,20 +1,78 @@
 """
-Data Preprocessor for Task 1 - Simplified for Ethiopian Banks
+Data preprocessor utilities and CLI pipeline for Task 1.
 """
-import pandas as pd
+
+from __future__ import annotations
+
 import os
-import re
+import pandas as pd
+
 from src.config import DATA_PATHS
 
 
-class ReviewPreprocessor:
-    def __init__(self):
-        self.input_path = DATA_PATHS['raw_reviews']
-        self.output_path = DATA_PATHS['processed_reviews']
-        self.df = None
+class DataPreprocessor:
+    """Reusable text-cleaning utilities used by both tests and CLI."""
 
-    def load_data(self):
-        """Load raw data"""
+    def __init__(self, min_review_length: int = 3) -> None:
+        self.min_review_length = min_review_length
+
+    def remove_duplicates(self, df: pd.DataFrame) -> pd.DataFrame:
+        subset = ["review_id"] if "review_id" in df.columns else ["review", "rating", "bank"]
+        return df.drop_duplicates(subset=subset).reset_index(drop=True)
+
+    def validate_ratings(self, df: pd.DataFrame) -> pd.DataFrame:
+        filtered = df[df["rating"].between(1, 5)]
+        return filtered.dropna(subset=["rating"]).reset_index(drop=True)
+
+    def filter_review_length(self, df: pd.DataFrame) -> pd.DataFrame:
+        reviews = df["review"].fillna("").astype(str)
+        mask = reviews.str.len() >= self.min_review_length
+        filtered = df[mask].copy()
+        filtered["review"] = reviews[mask]
+        return filtered.reset_index(drop=True)
+
+    def normalize_dates(self, df: pd.DataFrame) -> pd.DataFrame:
+        normalized = df.copy()
+        normalized["date"] = pd.to_datetime(normalized["date"], errors="coerce")
+        normalized = normalized.dropna(subset=["date"])
+        normalized["date"] = normalized["date"].dt.strftime("%Y-%m-%d")
+        return normalized.reset_index(drop=True)
+
+    def clean_reviews(self, df: pd.DataFrame) -> pd.DataFrame:
+        cleaned = df.copy()
+        cleaned["review"] = (
+            cleaned["review"]
+            .fillna("")
+            .astype(str)
+            .str.replace(r"\s+", " ", regex=True)
+            .str.strip()
+        )
+        cleaned["source"] = cleaned.get("source", "Google Play").fillna("Google Play")
+
+        cleaned = cleaned.dropna(subset=["bank"])
+        cleaned = self.remove_duplicates(cleaned)
+        cleaned = self.validate_ratings(cleaned)
+        cleaned = self.normalize_dates(cleaned)
+        cleaned = self.filter_review_length(cleaned)
+        cleaned = cleaned[cleaned["review"].str.len() > 0]
+
+        required_columns = ["review", "rating", "date", "bank", "source"]
+        missing = [col for col in required_columns if col not in cleaned.columns]
+        if missing:
+            raise ValueError(f"Missing required columns after cleaning: {missing}")
+
+        return cleaned[required_columns].reset_index(drop=True)
+
+
+class ReviewPreprocessor:
+    """File-based wrapper that reads raw CSVs and applies DataPreprocessor."""
+
+    def __init__(self) -> None:
+        self.input_path = DATA_PATHS["raw_reviews"]
+        self.output_path = DATA_PATHS["processed_reviews"]
+        self.df: pd.DataFrame | None = None
+
+    def load_data(self) -> bool:
         try:
             self.df = pd.read_csv(self.input_path)
             print(f"✅ Loaded {len(self.df)} raw reviews")
@@ -23,111 +81,64 @@ class ReviewPreprocessor:
         except FileNotFoundError:
             print(f"❌ Error: Raw data file not found at {self.input_path}")
             return False
-        except Exception as e:
-            print(f"❌ Error loading data: {e}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"❌ Error loading data: {exc}")
             return False
 
-    def preprocess_data(self):
-        """Main preprocessing pipeline for Task 1"""
+    def preprocess_data(self) -> pd.DataFrame | None:
+        if self.df is None:
+            print("❌ No data loaded. Call load_data() first.")
+            return None
+
         print("🔄 Starting data preprocessing...")
-        
-        # Check what columns we actually have
-        print(f"Available columns: {list(self.df.columns)}")
-        
-        # Remove duplicates
-        initial_count = len(self.df)
-        if 'review_id' in self.df.columns:
-            self.df = self.df.drop_duplicates(subset=['review_id'])
-            print(f"🧹 Removed {initial_count - len(self.df)} duplicate reviews")
-        else:
-            # If no review_id, use combination of text, bank and date
-            self.df = self.df.drop_duplicates(subset=['review_text', 'bank_name', 'review_date'])
-            print(f"🧹 Removed {initial_count - len(self.df)} duplicate reviews")
-        
-        # Handle missing data - using ACTUAL column names from your data
-        required_columns = ['review_text', 'rating', 'review_date', 'bank_name']
-        missing_cols = [col for col in required_columns if col not in self.df.columns]
-        
-        if missing_cols:
-            print(f"❌ Missing required columns: {missing_cols}")
+        cleaner = DataPreprocessor()
+
+        df = self.df.copy()
+        rename_map = {
+            "review_text": "review",
+            "review_date": "date",
+            "bank_name": "bank",
+        }
+        df = df.rename(columns=rename_map)
+
+        if "bank" not in df.columns and "bank_name" in self.df.columns:
+            df["bank"] = self.df["bank_name"]
+        if "source" not in df.columns:
+            df["source"] = self.df.get("source", "Google Play Store")
+
+        required = {"review", "rating", "date", "bank"}
+        missing = [col for col in required if col not in df.columns]
+        if missing:
+            print(f"❌ Missing required columns: {missing}")
             return None
-            
-        self.df = self.df.dropna(subset=required_columns)
-        print(f"📝 After handling missing data: {len(self.df)} reviews")
-        
-        # Normalize dates to YYYY-MM-DD
-        try:
-            self.df['review_date'] = pd.to_datetime(self.df['review_date'], errors='coerce').dt.strftime('%Y-%m-%d')
-            # Remove rows with invalid dates
-            invalid_dates = self.df['review_date'].isna().sum()
-            if invalid_dates > 0:
-                print(f"⚠️  Removed {invalid_dates} rows with invalid dates")
-                self.df = self.df[self.df['review_date'].notna()]
-        except Exception as e:
-            print(f"❌ Error processing dates: {e}")
-            return None
-        
-        # Clean text
-        self.df['review_text'] = self.df['review_text'].fillna('')
-        self.df['review_text'] = self.df['review_text'].apply(
-            lambda x: re.sub(r'\s+', ' ', str(x)).strip()
-        )
-        
-        # Remove empty reviews
-        empty_reviews = (self.df['review_text'].str.len() == 0).sum()
-        if empty_reviews > 0:
-            print(f"⚠️  Removed {empty_reviews} empty reviews")
-            self.df = self.df[self.df['review_text'].str.len() > 0]
-        
-        # Validate ratings (1-5)
-        invalid_ratings = ((self.df['rating'] < 1) | (self.df['rating'] > 5)).sum()
-        if invalid_ratings > 0:
-            print(f"⚠️  Removed {invalid_ratings} reviews with invalid ratings")
-            self.df = self.df[(self.df['rating'] >= 1) & (self.df['rating'] <= 5)]
-        
-        # Create final Task 1 format - using the correct column mapping
-        processed_df = pd.DataFrame({
-            'review': self.df['review_text'],    # Map review_text to review
-            'rating': self.df['rating'],
-            'date': self.df['review_date'],      # Map review_date to date  
-            'bank': self.df['bank_name'],        # Map bank_name to bank
-            'source': self.df.get('source', 'Google Play Store')  # Use source if available
-        })
-        
+
+        processed_df = cleaner.clean_reviews(df)
         print(f"✅ Final processed dataset: {len(processed_df)} reviews")
         return processed_df
 
-    def save_data(self, df):
-        """Save processed data"""
+    def save_data(self, df: pd.DataFrame) -> pd.DataFrame | None:
         try:
             os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
             df.to_csv(self.output_path, index=False)
             print(f"💾 Saved {len(df)} processed reviews to {self.output_path}")
-            
-            # Show summary by bank
+
             print("\n📊 Summary by bank:")
-            bank_summary = df.groupby('bank').size()
-            for bank, count in bank_summary.items():
+            summary = df.groupby("bank").size()
+            for bank, count in summary.items():
                 print(f"   {bank}: {count} reviews")
-                
             return df
-        except Exception as e:
-            print(f"❌ Error saving data: {e}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"❌ Error saving data: {exc}")
             return None
 
 
-def preprocess_reviews():
-    """Main preprocessing function"""
+def preprocess_reviews() -> pd.DataFrame | None:
     preprocessor = ReviewPreprocessor()
-    
     if not preprocessor.load_data():
         return None
-    
     processed_df = preprocessor.preprocess_data()
-    
     if processed_df is not None:
         preprocessor.save_data(processed_df)
-    
     return processed_df
 
 
@@ -136,6 +147,6 @@ if __name__ == "__main__":
     if df is not None:
         print(f"\n🎉 Preprocessing completed! Final dataset: {len(df)} reviews")
         print("\n📋 Sample of processed data:")
-        print(df[['bank', 'rating', 'date', 'review']].head(3))
+        print(df[["bank", "rating", "date", "review"]].head(3))
     else:
         print("❌ Preprocessing failed!")
