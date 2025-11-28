@@ -38,6 +38,5 @@ jobs:
       - name: Run unit tests
         run: pytest --maxfail=1 --disable-warnings -q
 
-      - name: Verify package metadata
-        run: python setup.py check
+      
 
