@@ -8,6 +8,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List
 
 import pandas as pd
@@ -15,6 +16,20 @@ from google_play_scraper import Sort, app, reviews
 from tqdm import tqdm
 
 from src.config import APP_IDS, BANK_NAMES, DATA_PATHS, SCRAPING_CONFIG
+
+
+class _LegacyConfig:
+    """Backward-compatible shim exposed as `config` for legacy tests."""
+
+    def __init__(self) -> None:
+        self.paths = {"raw_data": DATA_PATHS["raw"]}
+        self.apps = {
+            code: {"id": app_id, "name": BANK_NAMES[code], "count": SCRAPING_CONFIG["reviews_per_bank"]}
+            for code, app_id in APP_IDS.items()
+        }
+
+
+config = _LegacyConfig()
 
 
 class PlayStoreScraper:
@@ -136,6 +151,56 @@ class PlayStoreScraper:
             count = len(df[df["bank_code"] == code])
             print(f"  {self.bank_names[code]}: {count}")
         print(f"\nRaw data saved to {DATA_PATHS['raw_reviews']}")
+        return df
+
+
+class ReviewScraper:
+    """Compatibility wrapper used by historical unit tests."""
+
+    def __init__(self) -> None:
+        self.sort = Sort.NEWEST
+        self.paths = config.paths
+        self.apps = config.apps
+        self.scraper = PlayStoreScraper()
+
+    def _app_code_from_id(self, app_id: str) -> str:
+        for code, candidate in APP_IDS.items():
+            if candidate == app_id:
+                return code
+        raise KeyError(f"Unknown app_id: {app_id}")
+
+    def scrape_reviews(self, app_id: str, app_name: str, count: int, sort: Sort) -> List[Dict]:
+        _ = sort  # unused, kept for backwards compatibility
+        bank_code = self._app_code_from_id(app_id)
+        raw = self.scraper.scrape_reviews(app_id, count)
+        return [
+            {
+                "review": row.get("content", ""),
+                "rating": row.get("score", 0),
+                "date": row.get("at", datetime.now()),
+                "bank": app_name,
+                "source": "Google Play Store",
+                "review_id": row.get("reviewId", ""),
+                "bank_code": bank_code,
+            }
+            for row in raw
+        ]
+
+    def save_raw_data(self, df: pd.DataFrame, filename: str = "reviews_raw.csv") -> Path:
+        raw_dir = Path(self.paths.get("raw_data", DATA_PATHS["raw"]))
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        output = raw_dir / filename
+        df.to_csv(output, index=False)
+        return output
+
+    def scrape_all_banks(self) -> pd.DataFrame:
+        rows: List[Dict] = []
+        for meta in self.apps.values():
+            rows.extend(self.scrape_reviews(meta["id"], meta["name"], meta["count"], self.sort))
+        if not rows:
+            return pd.DataFrame(columns=["review", "rating", "date", "bank", "source"])
+        df = pd.DataFrame(rows)
+        self.save_raw_data(df, filename="reviews_legacy.csv")
         return df
 
     def display_sample_reviews(self, df: pd.DataFrame, n: int = 3) -> None:
