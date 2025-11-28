@@ -1,0 +1,4 @@
+# Ignore raw CSV dumps
+*
+!.gitignore
+

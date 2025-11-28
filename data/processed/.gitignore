@@ -1,0 +1,4 @@
+# Ignore processed CSV outputs
+*
+!.gitignore
+
