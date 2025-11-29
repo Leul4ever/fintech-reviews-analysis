@@ -38,8 +38,9 @@ class DataPreprocessor:
         normalized["date"] = normalized["date"].dt.strftime("%Y-%m-%d")
         return normalized.reset_index(drop=True)
 
-    def clean_reviews(self, df: pd.DataFrame) -> pd.DataFrame:
+    def clean_reviews(self, df: pd.DataFrame, keep_columns: list[str] | None = None) -> pd.DataFrame:
         cleaned = df.copy()
+        keep_columns = keep_columns or []
         cleaned["review"] = (
             cleaned["review"]
             .fillna("")
@@ -61,7 +62,8 @@ class DataPreprocessor:
         if missing:
             raise ValueError(f"Missing required columns after cleaning: {missing}")
 
-        return cleaned[required_columns].reset_index(drop=True)
+        final_columns = required_columns + [col for col in keep_columns if col in cleaned.columns]
+        return cleaned[final_columns].reset_index(drop=True)
 
 
 class ReviewPreprocessor:
@@ -112,7 +114,8 @@ class ReviewPreprocessor:
             print(f"❌ Missing required columns: {missing}")
             return None
 
-        processed_df = cleaner.clean_reviews(df)
+        keep_columns = [col for col in ["review_id", "bank_code", "user_name"] if col in df.columns]
+        processed_df = cleaner.clean_reviews(df, keep_columns=keep_columns)
         print(f"✅ Final processed dataset: {len(processed_df)} reviews")
         return processed_df
 

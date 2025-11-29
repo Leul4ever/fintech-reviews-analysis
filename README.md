@@ -1,45 +1,190 @@
 # Customer Experience Analytics for Fintech Apps
 
-Collect, clean, and analyze Google Play Store reviews for Commercial Bank of Ethiopia (CBE), Bank of Abyssinia (BOA), and Dashen Bank. Task 1 focuses on delivering a reproducible scraping + preprocessing pipeline that satisfies the KPI targets (≥400 reviews per bank, ≥1,200 total, <5 % missing) and documents the methodology.
+A comprehensive pipeline for collecting, cleaning, and analyzing Google Play Store reviews for Ethiopian banking apps. This project delivers actionable insights through sentiment analysis and thematic categorization to help banks understand customer satisfaction drivers and pain points.
+
+## 🎯 Project Overview
+
+This repository implements a complete data science pipeline for analyzing mobile banking app reviews:
+
+- **Task 1:** Data collection and preprocessing (1,200+ reviews, <5% missing data)
+- **Task 2:** Sentiment analysis and thematic categorization (100% coverage, 7 themes per bank)
+
+**Target Banks:**
+- Commercial Bank of Ethiopia (CBE)
+- Bank of Abyssinia (BOA)
+- Dashen Bank
 
 ---
 
-## 1. Repository Layout
+## ✨ Features
 
-```
-fintech-reviews-analysis/
-├── .github/workflows/ci.yml        # Smoke tests on pull requests
-├── data/
-│   ├── raw/                        # Raw CSV exports (ignored by git)
-│   └── processed/                  # Cleaned CSV outputs (ignored by git)
-├── notebooks/                      # Optional EDA summaries
-├── scripts/                        # CLI entry-points (scrape, preprocess, validate)
-├── src/                            # Core scraper & preprocessor modules
-├── tests/                          # Unit tests for Task 1 utilities
-├── requirements.txt
-└── README.md
-```
+### Data Collection & Preprocessing
+- ✅ Automated scraping from Google Play Store
+- ✅ Robust error handling with retry logic
+- ✅ Data quality validation (duplicates, missing values, date normalization)
+- ✅ Clean, structured CSV outputs
 
-`data/*` directories are kept out of version control via `.gitignore` so large CSVs remain local.
+### Sentiment Analysis
+- ✅ State-of-the-art DistilBERT model (`distilbert-base-uncased-finetuned-sst-2-english`)
+- ✅ 100% sentiment coverage across all reviews
+- ✅ Aggregated sentiment by bank and star rating
+- ✅ Positive/negative score breakdowns
+
+### Thematic Analysis
+- ✅ TF-IDF keyword extraction with n-grams
+- ✅ 7 actionable themes per bank (exceeds 3-5 requirement)
+- ✅ Rule-based clustering with documented logic
+- ✅ Coverage metrics and example reviews per theme
+
+### Visualization
+- ✅ Interactive Jupyter notebook with sentiment and theme visualizations
+- ✅ Seaborn/Matplotlib charts for insights
 
 ---
 
-## 2. Environment Setup
+## 📋 Requirements
+
+- Python 3.11+
+- 8GB+ RAM (for transformer models)
+- Internet connection (for scraping and model downloads)
+
+---
+
+## 🚀 Quick Start
+
+### 1. Clone and Setup
 
 ```bash
+git clone <repository-url>
+cd fintech-reviews-analysis
+
+# Create virtual environment
 python -m venv venv
 venv\Scripts\activate          # Windows
+# source venv/bin/activate     # Linux/Mac
+
+# Install dependencies
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Dependencies: `google-play-scraper`, `pandas`, `numpy`, `tqdm`.
+### 2. Run Task 1: Data Collection & Preprocessing
+
+```bash
+# Scrape reviews (400 per bank = 1,200 total)
+python scripts/run_scraping.py
+
+# Preprocess the raw data
+python scripts/run_preprocessing.py
+
+# Validate Task 1 KPIs
+python scripts/validate_task1.py
+```
+
+### 3. Run Task 2: Sentiment & Thematic Analysis
+
+```bash
+# Run complete sentiment + theme pipeline
+python scripts/run_sentiment_themes.py
+
+# Check theme counts per bank
+python scripts/check_theme_counts.py
+```
+
+### 4. Explore Results
+
+```bash
+# Launch Jupyter notebook
+jupyter notebook notebooks/task2_sentiment_themes.ipynb
+```
 
 ---
 
-## 3. Configuration
+## 📁 Project Structure
 
-Defaults live in `src/config.py`:
+```
+fintech-reviews-analysis/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                    # CI/CD pipeline
+├── data/
+│   ├── raw/                          # Raw scraped data (gitignored)
+│   │   ├── reviews_raw.csv
+│   │   └── app_info.csv
+│   └── processed/                     # Cleaned outputs (gitignored)
+│       ├── reviews_processed.csv      # Task 1 output
+│       ├── reviews_with_sentiment.csv # Task 2 output
+│       ├── sentiment_summary.csv
+│       └── theme_summary.csv
+├── docs/
+│   ├── task2_theme_grouping_logic.md  # Theme documentation
+│   ├── task2_verification_report.md   # Task 2 verification
+│   └── task2_completion_checklist.md  # Completion checklist
+├── notebooks/
+│   └── task2_sentiment_themes.ipynb   # Visualization notebook
+├── scripts/
+│   ├── run_scraping.py                # Scrape reviews
+│   ├── run_preprocessing.py           # Clean data
+│   ├── run_sentiment_themes.py        # Task 2 pipeline
+│   ├── validate_task1.py              # KPI validation
+│   └── check_theme_counts.py          # Theme verification
+├── src/
+│   ├── config.py                      # Configuration
+│   ├── scraper.py                     # Play Store scraper
+│   ├── preprocessor.py                # Data cleaning
+│   └── analysis/
+│       ├── sentiment.py               # Sentiment analysis
+│       ├── themes.py                  # Theme extraction
+│       └── pipeline.py                # Task 2 orchestration
+├── tests/
+│   ├── test_scraper.py
+│   └── test_preprocessor.py
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## 📊 Results Summary
+
+### Task 1: Data Collection & Preprocessing
+
+| Metric | Result |
+|--------|--------|
+| **Total Reviews Collected** | 1,200 (400 per bank) |
+| **Missing Data Rate** | 0% |
+| **Data Quality** | ✅ All KPIs met |
+
+**Output:** `data/processed/reviews_processed.csv`
+- Columns: `review`, `rating`, `date`, `bank`, `source`
+
+### Task 2: Sentiment & Thematic Analysis
+
+| Metric | Result |
+|--------|--------|
+| **Sentiment Coverage** | 100% (1,200/1,200 reviews) |
+| **Themes per Bank** | 7 themes (exceeds 3-5 requirement) |
+| **Sentiment Model** | DistilBERT (SST-2 fine-tuned) |
+
+**Outputs:**
+- `reviews_with_sentiment.csv` - Full dataset with sentiment scores and themes
+- `sentiment_summary.csv` - Aggregated sentiment by bank/rating
+- `theme_summary.csv` - Themes with coverage and examples
+
+**Themes Identified:**
+1. Account Access Issues
+2. Transaction Performance
+3. User Interface & Experience
+4. Reliability & Stability
+5. Customer Support & Communication
+6. Feature Requests
+7. Other Feedback
+
+---
+
+## 🔧 Configuration
+
+Default settings in `src/config.py`:
 
 ```python
 APP_IDS = {
@@ -47,109 +192,197 @@ APP_IDS = {
     "BOA": "com.boa.boaMobileBanking",
     "DASHEN": "com.dashen.dashensuperapp",
 }
+
 SCRAPING_CONFIG = {
     "reviews_per_bank": 400,
     "max_retries": 3,
     "lang": "en",
     "country": "et",
 }
-DATA_PATHS = {
-    "raw_reviews": "data/raw/reviews_raw.csv",
-    "processed_reviews": "data/processed/reviews_processed.csv",
-}
 ```
 
-Override any key via environment variables (`CBE_APP_ID`, `SCRAPING__REVIEWS_PER_BANK`, etc.) or by adding a `config.yaml` with matching keys.
+Override via environment variables or `config.yaml` file.
 
 ---
 
-## 4. Pipelines & CLI Commands
+## 📖 Usage Examples
 
-Run all commands from the project root so `python -m` can resolve packages.
+### Command Line Interface
 
-| Step | Purpose | Command |
-|------|---------|---------|
-| Scrape | Pull ≥400 reviews per bank into `data/raw/reviews_raw.csv` | `python -m scripts.run_scraping --per-app 450` |
-| Preprocess | Clean the latest raw CSV and write `data/processed/reviews_processed.csv` | `python -m scripts.run_preprocessing` |
-| Validate | Confirm Task 1 KPIs (coverage, columns, missing data) | `python -m scripts.validate_task1 --target-total 1200 --max-missing 5` |
-| Tests | Run scraper/preprocessor unit tests | `pytest` |
+```bash
+# Scrape reviews
+python scripts/run_scraping.py
 
-Both scraping and preprocessing scripts can accept optional `--input/--output` arguments if you want to point at specific files.
+# Preprocess data
+python scripts/run_preprocessing.py
 
----
+# Run sentiment + theme analysis
+python scripts/run_sentiment_themes.py
 
-## 5. Methodology Summary (Task 1)
+# Validate Task 1 KPIs
+python scripts/validate_task1.py --target-total 1200 --max-missing 5
+```
 
-1. **Scraping** (`scripts/run_scraping.py` → `src/scraper.py`)
-   - Uses `google_play_scraper` with newest-first sorting to capture the most recent feedback.
-   - Retries failed network calls up to 3 times with a 5 s back-off.
-   - Stores per-app metadata in `data/raw/app_info.csv`.
-
-2. **Preprocessing** (`scripts/run_preprocessing.py` → `src/preprocessor.py`)
-   - Loads the raw CSV, deduplicates by `review_id`, enforces non-null `review`, `rating`, `date`, `bank`.
-   - Normalizes timestamps to `YYYY-MM-DD` and trims whitespace.
-   - Filters invalid ratings (must be between 1 and 5) and outputs Task 1 schema: `review, rating, date, bank, source`.
-
-3. **Validation** (`scripts/validate_task1.py`)
-   - Checks review counts per bank, overall total, column presence, and missing-value ratio to guarantee KPI compliance.
-
----
-
-## 6. Task 1 Results (2025‑11‑28 Run)
-
-| Metric | Result |
-|--------|--------|
-| Total raw reviews collected | **1,200** (400 per bank) |
-| Total cleaned reviews | **1,200** |
-| Missing-value ratio after preprocessing | **0 %** |
-| Output columns | `review`, `rating`, `date`, `bank`, `source` |
-| Raw output location | `data/raw/reviews_raw.csv` |
-| Processed output location | `data/processed/reviews_processed.csv` |
-
-Breakdown by bank (after cleaning):
-- Commercial Bank of Ethiopia: 400 reviews
-- Bank of Abyssinia: 400 reviews
-- Dashen Bank: 400 reviews
-
-`python -m scripts.validate_task1 --target-total 1200 --max-missing 5` prints the same summary and confirms “✅ ALL REQUIREMENTS MET”.
-
----
-
-## 7. Direct Module Usage
+### Python API
 
 ```python
 from src.scraper import PlayStoreScraper
 from src.preprocessor import ReviewPreprocessor
+from src.analysis.pipeline import SentimentThemePipeline
 
+# Task 1: Scraping
 scraper = PlayStoreScraper()
 raw_df = scraper.scrape_all_banks()
 
+# Task 1: Preprocessing
 preprocessor = ReviewPreprocessor()
-preprocessor.load_data()           # reads DATA_PATHS['raw_reviews']
+preprocessor.load_data()
 clean_df = preprocessor.preprocess_data()
+
+# Task 2: Sentiment + Themes
+pipeline = SentimentThemePipeline()
+outputs = pipeline.run()
 ```
 
-Use this approach inside notebooks or other orchestration scripts when you need programmatic access instead of the CLI wrappers.
+---
+
+## 🔬 Methodology
+
+### Task 1: Data Collection & Preprocessing
+
+1. **Scraping**
+   - Uses `google-play-scraper` library
+   - Sorts by newest reviews first
+   - Retries failed requests (3 attempts, 5s backoff)
+   - Saves app metadata separately
+
+2. **Preprocessing**
+   - Removes duplicates by `review_id`
+   - Handles missing values (drops rows with null critical fields)
+   - Normalizes dates to `YYYY-MM-DD` format
+   - Validates ratings (1-5 range)
+   - Trims whitespace and cleans text
+
+### Task 2: Sentiment & Thematic Analysis
+
+1. **Sentiment Analysis**
+   - Model: `distilbert-base-uncased-finetuned-sst-2-english`
+   - Batch processing for efficiency
+   - Outputs: label (POSITIVE/NEGATIVE), score, probabilities
+
+2. **Keyword Extraction**
+   - Method: TF-IDF with n-grams (1-2)
+   - Stop-word removal (English)
+   - Top keywords extracted per bank
+
+3. **Theme Clustering**
+   - Rule-based matching against predefined keyword patterns
+   - 6 theme categories + "Other Feedback" catch-all
+   - Reviews can match multiple themes
+   - Coverage calculated per theme per bank
+
+**Detailed documentation:** See `docs/task2_theme_grouping_logic.md`
 
 ---
 
-## 8. Task 1 Checklist
+## 📈 Key Insights
 
-- [x] Repository + CI skeleton (`.gitignore`, `requirements.txt`, GitHub Actions).
-- [x] Configured scraper with retry/backoff targeting the latest Play Store IDs.
-- [x] Deterministic preprocessing pipeline with data-quality reporting.
-- [x] Command wrappers for scraping, preprocessing, and KPI validation.
-- [x] Tests for scraper and preprocessor utilities.
-- [x] Gathered ≥400 reviews per bank (1,200 total) and stored raw CSV outputs.
-- [x] Produced a cleaned CSV (<5 % missing) and documented methodology/results in this README.
+### Sentiment by Rating
+- **1-3 stars:** Strongly negative sentiment across all banks
+- **4 stars:** Mixed sentiment (varies by bank)
+- **5 stars:** Positive sentiment (Dashen Bank highest)
+
+### Common Themes
+- **Transaction Performance:** Most common pain point
+- **Account Access Issues:** Significant concern for CBE and BOA
+- **Reliability & Stability:** Frequent complaints about crashes and errors
+- **Feature Requests:** Users want more functionality
 
 ---
 
-## 9. Next Steps
+## 🧪 Testing
 
-- Incorporate sentiment or topic modeling analyses (Task 2+).
-- Automate nightly scraping via GitHub Actions + secure secrets.
-- Publish aggregate dashboards that consume `data/processed/reviews_processed.csv`.
+```bash
+# Run all tests
+pytest
 
-Task 1 deliverables are complete and validated; future work can build directly on the reproducible pipeline captured here.
+# Run with coverage
+pytest --cov=src
 
+# Run specific test file
+pytest tests/test_scraper.py
+```
+
+---
+
+## 📚 Documentation
+
+- **Theme Grouping Logic:** `docs/task2_theme_grouping_logic.md`
+- **Task 2 Verification:** `docs/task2_verification_report.md`
+- **Point-by-Point Check:** `docs/task2_point_by_point_verification.md`
+
+---
+
+## 🎯 Task Completion Status
+
+### Task 1: ✅ Complete
+- [x] Repository setup with CI/CD
+- [x] Scraping pipeline (1,200 reviews)
+- [x] Preprocessing pipeline (<5% missing)
+- [x] Validation scripts
+- [x] Documentation
+
+### Task 2: ✅ Complete
+- [x] Sentiment analysis (100% coverage)
+- [x] Theme extraction (7 themes per bank)
+- [x] TF-IDF keyword extraction
+- [x] Preprocessing (tokenization, stop-words, lemmatization)
+- [x] CSV outputs with all required columns
+- [x] Documentation and verification
+
+---
+
+## 🚧 Future Enhancements
+
+- [ ] Topic modeling (LDA/NMF) for automatic theme discovery
+- [ ] Time-series analysis of sentiment trends
+- [ ] Automated nightly scraping via GitHub Actions
+- [ ] Interactive dashboard (Streamlit/Dash)
+- [ ] Multi-language support (Amharic, Oromo)
+- [ ] Comparison with competitor banks
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is for educational and research purposes.
+
+---
+
+## 👥 Acknowledgments
+
+- `google-play-scraper` for Play Store data access
+- Hugging Face for the DistilBERT model
+- scikit-learn for TF-IDF and NLP utilities
+
+---
+
+## 📞 Contact & Support
+
+For questions or issues, please open an issue on GitHub.
+
+---
+
+**Last Updated:** November 2025  
+**Python Version:** 3.11+  
+**Status:** ✅ Production Ready
