@@ -91,52 +91,11 @@ python scripts/run_sentiment_themes.py
 python scripts/check_theme_counts.py
 ```
 
-### 4. Setup PostgreSQL Database (Task 3)
+### 4. Explore Results
 
 ```bash
-# 1. Install PostgreSQL (if not already installed)
-# Download from: https://www.postgresql.org/download/
-
-# 2. Create the database using pgAdmin or psql:
-#    CREATE DATABASE bank_reviews;
-
-# 3. Create .env file with your database credentials
-#    Copy .env.example to .env and fill in your password:
-cp .env.example .env
-#    Edit .env and set your DB_PASSWORD
-
-# 4. Install additional dependencies
-pip install -r requirements.txt
-
-# 5. Create database tables
-python scripts/load_to_postgres.py --create-tables
-
-# 6. Load data into PostgreSQL
-python scripts/load_to_postgres.py
-
-# 7. Verify data integrity
-python scripts/verify_db_integrity.py
-```
-
-### 5. Generate Insights and Visualizations (Task 4)
-
-```bash
-# Generate insights (drivers, pain points, recommendations)
-python scripts/generate_insights.py
-
-# Create visualizations (3-5 plots)
-python scripts/create_visualizations.py
-
-# View the final report
-# Open: docs/task4_final_report.md
-```
-
-### 6. Explore Results
-
-```bash
-# Launch Jupyter notebooks
-jupyter notebook notebooks/task2_sentiment_themes.ipynb        # Task 2 visualizations
-jupyter notebook notebooks/task4_insights_recommendations.ipynb # Task 4 insights
+# Launch Jupyter notebook
+jupyter notebook notebooks/task2_sentiment_themes.ipynb
 ```
 
 ---
@@ -161,32 +120,22 @@ fintech-reviews-analysis/
 │   ├── task2_theme_grouping_logic.md  # Theme documentation
 │   ├── task2_verification_report.md   # Task 2 verification
 │   └── task2_completion_checklist.md  # Completion checklist
-├── database/
-│   └── schema.sql                     # PostgreSQL schema definition
 ├── notebooks/
-│   ├── task2_sentiment_themes.ipynb   # Task 2: Sentiment & themes visualization
-│   └── task4_insights_recommendations.ipynb  # Task 4: Insights and recommendations
+│   └── task2_sentiment_themes.ipynb   # Visualization notebook
 ├── scripts/
 │   ├── run_scraping.py                # Scrape reviews
 │   ├── run_preprocessing.py           # Clean data
 │   ├── run_sentiment_themes.py        # Task 2 pipeline
-│   ├── load_to_postgres.py            # Task 3: Load data to PostgreSQL
-│   ├── verify_db_integrity.py         # Task 3: Verify database
-│   ├── generate_insights.py           # Task 4: Generate insights
-│   ├── create_visualizations.py       # Task 4: Create visualizations
 │   ├── validate_task1.py              # KPI validation
 │   └── check_theme_counts.py          # Theme verification
 ├── src/
 │   ├── config.py                      # Configuration
 │   ├── scraper.py                     # Play Store scraper
 │   ├── preprocessor.py                # Data cleaning
-│   ├── database.py                    # PostgreSQL connection utilities
-│   ├── analysis/
-│   │   ├── sentiment.py               # Sentiment analysis
-│   │   ├── themes.py                  # Theme extraction
-│   │   └── pipeline.py                # Task 2 orchestration
-│   └── insights/
-│       └── analyzer.py                # Task 4: Insights and recommendations
+│   └── analysis/
+│       ├── sentiment.py               # Sentiment analysis
+│       ├── themes.py                  # Theme extraction
+│       └── pipeline.py                # Task 2 orchestration
 ├── tests/
 │   ├── test_scraper.py
 │   └── test_preprocessor.py
@@ -235,43 +184,7 @@ fintech-reviews-analysis/
 6. Feature Requests
 7. Other Feedback
 
-### Task 3: PostgreSQL Database Storage
-
-| Metric | Result |
-|--------|--------|
-| **Database Name** | `bank_reviews` |
-| **Tables Created** | 2 (banks, reviews) |
-| **Reviews Stored** | 1,200+ (with sentiment data) |
-| **Data Integrity** | ✅ Foreign keys, constraints, indexes |
-
-**Schema:**
-- **banks** table: `bank_id` (PK), `bank_name`, `app_name`
-- **reviews** table: `review_id` (PK), `bank_id` (FK), `review_text`, `rating`, `review_date`, `sentiment_label`, `sentiment_score`, `source`
-
-**Files:**
-- `database/schema.sql` - SQL schema definition
-- `scripts/load_to_postgres.py` - Data loading script
-- `scripts/verify_db_integrity.py` - Integrity verification queries
-
-### Task 4: Insights and Recommendations
-
-| Metric | Result |
-|--------|--------|
-| **Drivers Identified** | 3+ per bank (Dashen Bank leads) |
-| **Pain Points Identified** | 3-6 per bank (CBE, BOA need improvement) |
-| **Visualizations Created** | 4 plots (sentiment, ratings, themes, drivers/pain points) |
-| **Recommendations Generated** | 2+ per bank with priorities |
-
-**Outputs:**
-- `data/processed/insights_summary.csv` - Drivers and pain points per bank
-- `data/processed/recommendations.csv` - Improvement recommendations
-- `data/processed/visualizations/` - 4 visualization plots
-- `docs/task4_final_report.md` - Comprehensive 4-page final report
-
-**Key Findings:**
-- Dashen Bank: 3.96 ⭐ rating, excels in UI/UX and customer support
-- CBE: 2.66 ⭐ rating, needs improvement in transactions and account access
-- BOA: 2.02 ⭐ rating, urgent fixes needed for stability and transactions
+> **Note:** The current public version of this repository focuses on **Task 1 (preprocessing)** and **Task 2 (sentiment & themes)**. Earlier experimental work for Tasks 3–4 (database + insights) was removed to keep the project lightweight and easy to run.
 
 ---
 
@@ -311,19 +224,6 @@ python scripts/run_preprocessing.py
 
 # Run sentiment + theme analysis
 python scripts/run_sentiment_themes.py
-
-# Load data into PostgreSQL (Task 3)
-python scripts/load_to_postgres.py --create-tables
-python scripts/load_to_postgres.py
-
-# Verify database integrity (Task 3)
-python scripts/verify_db_integrity.py
-
-# Generate insights and recommendations (Task 4)
-python scripts/generate_insights.py
-
-# Create visualizations (Task 4)
-python scripts/create_visualizations.py
 
 # Validate Task 1 KPIs
 python scripts/validate_task1.py --target-total 1200 --max-missing 5
@@ -389,77 +289,6 @@ outputs = pipeline.run()
 
 **Detailed documentation:** See `docs/task2_theme_grouping_logic.md`
 
-### Task 3: PostgreSQL Database Storage
-
-1. **Database Setup**
-   - PostgreSQL database: `bank_reviews`
-   - Two main tables: `banks` and `reviews`
-   - Foreign key relationship: `reviews.bank_id` → `banks.bank_id`
-   - Indexes on frequently queried columns (rating, date, sentiment_label)
-
-2. **Schema Design**
-   - **Banks Table:** Stores bank metadata (name, app name)
-   - **Reviews Table:** Stores processed reviews with sentiment scores
-   - Supports both preprocessed data (Task 1) and sentiment-enriched data (Task 2)
-
-3. **Data Loading**
-   - Uses `psycopg2` for PostgreSQL connectivity
-   - Handles duplicates with `ON CONFLICT` upsert logic
-   - Validates data before insertion
-   - Progress tracking for large datasets
-
-4. **Integrity Verification**
-   - SQL queries to verify data completeness
-   - Count reviews per bank
-   - Calculate average ratings
-   - Check sentiment distribution
-   - Validate foreign key relationships
-
-**Database Configuration:**
-Create a `.env` file with:
-```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=bank_reviews
-DB_USER=postgres
-DB_PASSWORD=your_password_here
-```
-
-### Task 4: Insights and Recommendations
-
-1. **Insights Extraction**
-   - Identifies drivers (positive themes) and pain points (negative themes) per bank
-   - Analyzes sentiment scores and ratings by theme
-   - Compares banks across key metrics
-   - Evidence-based analysis with review counts
-
-2. **Recommendations Generation**
-   - Priority-based recommendations (High, Medium, Low)
-   - Theme-specific improvement suggestions
-   - Rationale and expected impact for each recommendation
-   - Actionable steps for implementation
-
-3. **Visualizations**
-   - Sentiment trends by bank and rating
-   - Rating distribution comparisons
-   - Theme coverage and sentiment heatmaps
-   - Drivers vs pain points visualization
-
-4. **Final Report**
-   - Comprehensive 4-page analysis document
-   - Executive summary and key findings
-   - Detailed insights per bank
-   - Bank comparison analysis
-   - Ethics and bias considerations
-   - Implementation recommendations
-
-**Output Files:**
-- `data/processed/insights_summary.csv` - Extracted drivers and pain points
-- `data/processed/recommendations.csv` - Improvement recommendations
-- `data/processed/visualizations/*.png` - Visualization plots (4 plots)
-- `docs/task4_final_report.md` - Final report (4+ pages)
-- `notebooks/task4_insights_recommendations.ipynb` - Interactive notebook with all visualizations
-
 ---
 
 ## 📈 Key Insights
@@ -517,23 +346,7 @@ pytest tests/test_scraper.py
 - [x] CSV outputs with all required columns
 - [x] Documentation and verification
 
-### Task 3: ✅ Complete
-- [x] PostgreSQL database setup (`bank_reviews`)
-- [x] Schema design (banks and reviews tables)
-- [x] Data loading script with upsert logic
-- [x] Integrity verification queries
-- [x] SQL schema file committed
-- [x] Environment configuration (.env.example)
-- [x] Documentation in README.md
-
-### Task 4: ✅ Complete
-- [x] Insights extraction (drivers and pain points per bank)
-- [x] Bank comparison analysis (CBE vs BOA vs Dashen)
-- [x] Recommendations generation (2+ per bank)
-- [x] Visualizations (4 plots: sentiment, ratings, themes, drivers/pain points)
-- [x] Final report (4-page comprehensive analysis)
-- [x] Ethics and bias considerations documented
-- [x] All outputs saved to CSV and visualizations directory
+> The current codebase fully covers **Task 1** and **Task 2**. Tasks 3–4 are good directions for future work (see "Future Enhancements").
 
 ---
 
@@ -569,8 +382,6 @@ This project is for educational and research purposes.
 - `google-play-scraper` for Play Store data access
 - Hugging Face for the DistilBERT model
 - scikit-learn for TF-IDF and NLP utilities
-- PostgreSQL and `psycopg2` for database storage
-- `wordcloud` for keyword visualization
 - `matplotlib` and `seaborn` for data visualization
 
 ---
