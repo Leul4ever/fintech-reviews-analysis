@@ -1,5 +1,6 @@
 import ast
 import io
+import os
 from datetime import datetime
 
 import pandas as pd
@@ -8,7 +9,20 @@ import streamlit as st
 from PIL import Image
 from wordcloud import STOPWORDS, WordCloud
 
+# Must be first Streamlit call
+st.set_page_config(
+    page_title="Customer Experience Analytics | Ethiopian Mobile Banking",
+    layout="wide",
+    page_icon="📱",
+    initial_sidebar_state="expanded",
+)
+
 DATA_PATH = "data/processed/reviews_with_sentiment.csv"
+# Fallback data URL (public, read-only). Can be overridden via env DATA_URL.
+DATA_URL_DEFAULT = os.getenv(
+    "DATA_URL",
+    "https://drive.google.com/uc?export=download&id=1SSbnXf3P-hrpsDaj3iZdk_5r8Z95CTOE",
+)
 
 BANK_NAME_TO_CODE = {
     "Commercial Bank of Ethiopia": "CBE",
@@ -24,44 +38,68 @@ BANK_DISPLAY_NAME = {
 
 
 @st.cache_data(show_spinner=False)
-def load_data(path: str = DATA_PATH) -> pd.DataFrame:
-    df = pd.read_csv(path)
-    df = df.loc[:, ~df.columns.duplicated()]
-    rename_map = {
-        "review": "review_text",
-        "review_date": "review_date",
-        "date": "review_date",
-        "bank": "bank_name",
-        "bank_name": "bank_name",
-        "sentiment": "sentiment_label",
-        "theme": "themes",
-    }
-    df = df.rename(columns=rename_map)
-    if "bank_code" not in df.columns:
-        df["bank_code"] = df["bank_name"].map(BANK_NAME_TO_CODE)
-    df["bank_code"] = df["bank_code"].fillna(df["bank_name"].map(BANK_NAME_TO_CODE)).fillna(df.get("bank_code")).str.upper()
-    df["bank_name"] = df["bank_name"].fillna(df["bank_code"].map(BANK_DISPLAY_NAME)).fillna("Unknown")
-    df["sentiment_label"] = df["sentiment_label"].astype(str).str.upper()
-    df["rating"] = pd.to_numeric(df["rating"], errors="coerce")
-    df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce")
-    df = df.dropna(subset=["review_text", "rating", "review_date", "bank_code"])
+def load_data(path: str = DATA_PATH, remote_url: str | None = DATA_URL_DEFAULT) -> pd.DataFrame:
+    def _prepare(df: pd.DataFrame) -> pd.DataFrame:
+        df = df.loc[:, ~df.columns.duplicated()]
+        rename_map = {
+            "review": "review_text",
+            "review_date": "review_date",
+            "date": "review_date",
+            "bank": "bank_name",
+            "bank_name": "bank_name",
+            "sentiment": "sentiment_label",
+            "theme": "themes",
+        }
+        df = df.rename(columns=rename_map)
+        if "bank_code" not in df.columns:
+            df["bank_code"] = df["bank_name"].map(BANK_NAME_TO_CODE)
+        df["bank_code"] = (
+            df["bank_code"]
+            .fillna(df["bank_name"].map(BANK_NAME_TO_CODE))
+            .fillna(df.get("bank_code"))
+            .str.upper()
+        )
+        df["bank_name"] = df["bank_name"].fillna(df["bank_code"].map(BANK_DISPLAY_NAME)).fillna("Unknown")
+        df["sentiment_label"] = df["sentiment_label"].astype(str).str.upper()
+        df["rating"] = pd.to_numeric(df["rating"], errors="coerce")
+        df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce")
+        df = df.dropna(subset=["review_text", "rating", "review_date", "bank_code"])
 
-    def parse_themes(value):
-        if pd.isna(value):
-            return []
-        if isinstance(value, list):
-            return value
+        def parse_themes(value):
+            if pd.isna(value):
+                return []
+            if isinstance(value, list):
+                return value
+            try:
+                parsed = ast.literal_eval(value)
+                if isinstance(parsed, list):
+                    return [str(v).strip() for v in parsed]
+            except (ValueError, SyntaxError):
+                pass
+            return [str(value).strip()] if value else []
+
+        df["themes_list"] = df["themes"].apply(parse_themes) if "themes" in df.columns else [[] for _ in range(len(df))]
+        df["year_month"] = df["review_date"].dt.to_period("M").dt.to_timestamp()
+        return df.reset_index(drop=True)
+
+    # Prefer remote URL; fallback to local path
+    if remote_url:
         try:
-            parsed = ast.literal_eval(value)
-            if isinstance(parsed, list):
-                return [str(v).strip() for v in parsed]
-        except (ValueError, SyntaxError):
-            pass
-        return [str(value).strip()] if value else []
+            df = pd.read_csv(remote_url)
+            st.info("Loaded data from DATA_URL.")
+            return _prepare(df)
+        except Exception as exc:
+            st.warning(f"Failed to load from DATA_URL ({remote_url}): {exc}")
 
-    df["themes_list"] = df["themes"].apply(parse_themes) if "themes" in df.columns else [[] for _ in range(len(df))]
-    df["year_month"] = df["review_date"].dt.to_period("M").dt.to_timestamp()
-    return df.reset_index(drop=True)
+    try:
+        df = pd.read_csv(path)
+        return _prepare(df)
+    except FileNotFoundError:
+        st.error(
+            f"Data file not found at '{path}' and no valid DATA_URL. "
+            "Provide a public CSV URL via env DATA_URL."
+        )
+        return pd.DataFrame()
 
 
 def apply_filters(df: pd.DataFrame, bank: str, date_range, sentiments, rating_range):
@@ -217,12 +255,6 @@ def generate_insights(filtered: pd.DataFrame, comparison: pd.DataFrame):
 
 
 def set_style():
-    st.set_page_config(
-        page_title="Customer Experience Analytics | Ethiopian Mobile Banking",
-        layout="wide",
-        page_icon="📱",
-        initial_sidebar_state="expanded",
-    )
     st.markdown(
         """
         <style>
@@ -241,15 +273,25 @@ def main():
     st.title("Customer Experience Analytics for Ethiopian Mobile Banking Apps")
     st.caption("Interactive review intelligence for CBE, BOA, and Dashen | Google Play data")
 
-    df = load_data()
-    min_date, max_date = df["review_date"].min().date(), df["review_date"].max().date()
-
     with st.sidebar:
         st.header("Filters")
         bank_option = st.selectbox("Bank", options=["All", "CBE", "BOA", "DASHEN"], index=0)
-        date_range = st.date_input("Date range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
+        date_range = st.date_input("Date range", value=None)
         sentiment_options = st.multiselect("Sentiment", options=["POSITIVE", "NEUTRAL", "NEGATIVE"], default=["POSITIVE", "NEUTRAL", "NEGATIVE"])
         rating_range = st.slider("Rating", min_value=1, max_value=5, value=(1, 5), step=1)
+
+    df = load_data()
+    min_date, max_date = df["review_date"].min().date(), df["review_date"].max().date()
+
+    if df.empty:
+        st.stop()
+
+    if not date_range:
+        date_range = (min_date, max_date)
+    else:
+        # Normalize single date selection into a tuple
+        if not isinstance(date_range, (list, tuple)):
+            date_range = (date_range, date_range)
 
     filtered_df = apply_filters(df, bank_option, date_range, sentiment_options, rating_range)
     comparison_base = apply_filters(df, "All", date_range, sentiment_options, rating_range)
